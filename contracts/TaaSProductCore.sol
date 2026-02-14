@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/*
+    TAAS V3 — PRODUCT CORE CONTRACT
+    --------------------------------
+    Features:
+    ✔ Create product
+    ✔ Immutable product data
+    ✔ Ownership tracking
+    ✔ Public verification
+    ✔ Gas optimized
+*/
+
 contract TaaSProductCore {
 
     struct Product {
@@ -25,6 +36,25 @@ contract TaaSProductCore {
         uint256 timestamp
     );
 
+    event OwnershipTransferred(
+        string gpid,
+        address indexed from,
+        address indexed to
+    );
+
+    modifier onlyOwner(string memory gpid) {
+        require(products[gpid].owner == msg.sender, "NOT_OWNER");
+        _;
+    }
+
+    modifier productExists(string memory gpid) {
+        require(exists[gpid], "PRODUCT_NOT_FOUND");
+        _;
+    }
+
+    // =========================
+    // CREATE PRODUCT
+    // =========================
     function createProduct(
         string memory gpid,
         string memory brand,
@@ -33,6 +63,7 @@ contract TaaSProductCore {
         string memory factory,
         string memory batch
     ) external {
+
         require(bytes(gpid).length > 0, "INVALID_GPID");
         require(!exists[gpid], "GPID_EXISTS");
 
@@ -58,9 +89,32 @@ contract TaaSProductCore {
         );
     }
 
+    // =========================
+    // TRANSFER OWNERSHIP
+    // =========================
+    function transferOwnership(
+        string memory gpid,
+        address newOwner
+    )
+        external
+        productExists(gpid)
+        onlyOwner(gpid)
+    {
+        require(newOwner != address(0), "INVALID_OWNER");
+
+        address oldOwner = products[gpid].owner;
+        products[gpid].owner = newOwner;
+
+        emit OwnershipTransferred(gpid, oldOwner, newOwner);
+    }
+
+    // =========================
+    // VERIFY PRODUCT
+    // =========================
     function getProduct(string memory gpid)
         external
         view
+        productExists(gpid)
         returns (
             string memory,
             string memory,
@@ -73,8 +127,6 @@ contract TaaSProductCore {
             address
         )
     {
-        require(exists[gpid], "PRODUCT_NOT_FOUND");
-
         Product memory p = products[gpid];
 
         return (
@@ -90,7 +142,10 @@ contract TaaSProductCore {
         );
     }
 
-    function productExists(string memory gpid)
+    // =========================
+    // QUICK CHECK
+    // =========================
+    function existsProduct(string memory gpid)
         external
         view
         returns (bool)

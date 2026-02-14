@@ -4,23 +4,29 @@
   "description": "ASJUJ Trust-as-a-Service V3",
   "main": "index.js",
   "scripts": {
-    "start": "node panel/server.js",
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy.ts --network sepolia",
     "panel": "node panel/server.js",
-    "verify": "node verifier/verify.js",
-    "deploy": "npx hardhat run scripts/deploy.ts --network sepolia"
+    "verify": "node verifier/verify.js"
   },
-  "keywords": [],
-  "author": "ASJUJ",
-  "license": "ISC",
+  "keywords": [
+    "blockchain",
+    "taas",
+    "asjuj",
+    "verification",
+    "web3"
+  ],
+  "author": "ASJUJ Network",
+  "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
     "ethers": "^6.10.0",
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "hardhat": "^2.22.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "hardhat": "^2.22.0",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
   }
 }

@@ -1,24 +1,26 @@
 {
   "name": "taas-v3",
   "version": "1.0.0",
-  "description": "",
+  "description": "ASJUJ Trust-as-a-Service V3",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node panel/server.js",
+    "panel": "node panel/server.js",
+    "verify": "node verifier/verify.js",
+    "deploy": "npx hardhat run scripts/deploy.ts --network sepolia"
   },
   "keywords": [],
-  "author": "",
+  "author": "ASJUJ",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^17.3.1",
-    "ethers": "^6.16.0",
-    "express": "^5.2.1",
-    "hardhat": "^3.1.8"
+    "dotenv": "^16.4.5",
+    "ethers": "^6.10.0",
+    "express": "^4.19.2"
   },
-  "type": "module",
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^4.0.4",
-    "@types/node": "^22.19.11",
-    "typescript": "~5.8.0"
+    "hardhat": "^2.22.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

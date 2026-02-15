@@ -1,239 +1,272 @@
 import express from "express"
+import bodyParser from "body-parser"
 import { ethers } from "ethers"
 import dotenv from "dotenv"
 
 dotenv.config()
 
 const app = express()
-app.use(express.json())
-app.use(express.urlencoded({ extended:true }))
+app.use(bodyParser.urlencoded({ extended:true }))
+app.use(bodyParser.json())
 
-/* =======================================================
-   ENV CHECK
-======================================================= */
+/* ========================
+   BLOCKCHAIN CONNECTION
+======================== */
 
-const RPC = process.env.SEPOLIA_RPC_URL
-const PRIVATE_KEY = process.env.PRIVATE_KEY
-const CORE = process.env.CONTRACT_ADDRESS
-const HISTORY = process.env.HISTORY_ADDRESS
+const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL)
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider)
 
-if(!RPC || !PRIVATE_KEY || !CORE){
-    console.log("❌ Missing ENV variables")
-    console.log("RPC:",RPC? "OK":"MISSING")
-    console.log("KEY:",PRIVATE_KEY? "OK":"MISSING")
-    console.log("CORE:",CORE? "OK":"MISSING")
-    process.exit(1)
-}
+/* ========================
+   CORE CONTRACT
+======================== */
 
-/* =======================================================
-   PROVIDER + WALLET
-======================================================= */
+const CORE_ABI = [
+"function createProduct(string,string,string,string,string,string)",
+"function transferOwnership(string,address)"
+]
 
-const provider = new ethers.JsonRpcProvider(RPC)
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider)
-
-/* =======================================================
-   CONTRACTS
-======================================================= */
-
-const coreContract = new ethers.Contract(
-    CORE,
-    [
-        "function createProduct(string,string,string,string,string,string)",
-        "function transferOwnership(string,address)",
-        "function getProduct(string) view returns(string,string,string,string,string,string,uint256,address,address)"
-    ],
-    wallet
+const core = new ethers.Contract(
+ process.env.CONTRACT_ADDRESS,
+ CORE_ABI,
+ wallet
 )
 
-let historyContract = null
+/* ========================
+   SHIELD CONTRACT
+======================== */
 
-if(HISTORY){
-    historyContract = new ethers.Contract(
-        HISTORY,
-        [
-            "function record(string,address,address)",
-            "function getHistory(string) view returns(tuple(address from,address to,uint256 time)[])"
-        ],
-        wallet
-    )
-}
+const SHIELD_ABI = [
+"function freeze(string)",
+"function flag(string,string)"
+]
 
-/* =======================================================
+const shield = new ethers.Contract(
+ process.env.SHIELD_ADDRESS,
+ SHIELD_ABI,
+ wallet
+)
+
+/* ========================
    UI PAGE
-======================================================= */
+======================== */
 
 app.get("/", (req,res)=>{
+
 res.send(`
+<!DOCTYPE html>
 <html>
 <head>
 <title>ASJUJ Control Panel</title>
+
 <style>
 body{
-font-family:Arial;
-background:#0a0f1c;
-color:white;
-text-align:center;
-padding-top:40px;
+ margin:0;
+ font-family: 'Segoe UI', sans-serif;
+ background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+ color:white;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ height:100vh;
 }
+
+.container{
+ background: rgba(255,255,255,0.05);
+ backdrop-filter: blur(15px);
+ border-radius:20px;
+ padding:40px;
+ width:420px;
+ box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+
+h1{
+ text-align:center;
+ margin-bottom:30px;
+ font-weight:600;
+ letter-spacing:1px;
+}
+
 input{
-padding:12px;
-margin:8px;
-width:260px;
-border-radius:10px;
-border:none;
+ width:100%;
+ padding:12px;
+ margin:8px 0;
+ border:none;
+ border-radius:10px;
+ background:#111;
+ color:white;
 }
+
 button{
-padding:12px 22px;
-margin:10px;
-border:none;
-border-radius:12px;
-background:#00ffd5;
-font-weight:bold;
-cursor:pointer;
+ width:100%;
+ padding:12px;
+ margin-top:12px;
+ border:none;
+ border-radius:12px;
+ background: linear-gradient(90deg,#00f2fe,#4facfe);
+ color:black;
+ font-weight:bold;
+ cursor:pointer;
+ transition:.3s;
 }
-.card{
-background:#121a2c;
-padding:25px;
-border-radius:20px;
-width:420px;
-margin:auto;
-box-shadow:0 0 40px #00ffd520;
+
+button:hover{
+ transform:scale(1.03);
+ box-shadow:0 0 15px #4facfe;
+}
+
+.section{
+ margin-top:25px;
+ border-top:1px solid rgba(255,255,255,0.1);
+ padding-top:20px;
+}
+
+.status{
+ margin-top:15px;
+ text-align:center;
+ font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="container">
 
-<h2>ASJUJ Control Panel</h2>
+<h1>ASJUJ PANEL</h1>
 
-<input id="gpid" placeholder="GPID"><br>
-<input id="brand" placeholder="Brand"><br>
-<input id="model" placeholder="Model"><br>
-<input id="category" placeholder="Category"><br>
-<input id="factory" placeholder="Factory"><br>
-<input id="batch" placeholder="Batch"><br>
-<input id="newOwner" placeholder="Transfer Address"><br>
+<form method="POST" action="/create">
 
-<button onclick="create()">Create Product</button>
-<button onclick="transfer()">Transfer Ownership</button>
-<button onclick="history()">View History</button>
+<input name="gpid" placeholder="GPID" required>
+<input name="brand" placeholder="Brand" required>
+<input name="model" placeholder="Model" required>
+<input name="category" placeholder="Category" required>
+<input name="factory" placeholder="Factory" required>
+<input name="batch" placeholder="Batch" required>
 
-<p id="msg"></p>
+<button>Create Product</button>
+
+</form>
+
+
+<div class="section">
+
+<form method="POST" action="/transfer">
+
+<input name="gpid" placeholder="GPID">
+<input name="to" placeholder="New Owner Wallet">
+
+<button>Transfer Ownership</button>
+
+</form>
 
 </div>
 
-<script>
 
-async function create(){
-const res = await fetch("/create",{method:"POST",headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-gpid:gpid.value,
-brand:brand.value,
-model:model.value,
-category:category.value,
-factory:factory.value,
-batch:batch.value
-})})
-msg.innerText = await res.text()
-}
+<div class="section">
 
-async function transfer(){
-const res = await fetch("/transfer",{method:"POST",headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-gpid:gpid.value,
-newOwner:newOwner.value
-})})
-msg.innerText = await res.text()
-}
+<form method="POST" action="/freeze">
 
-function history(){
-window.open("/history/"+gpid.value,"_blank")
-}
+<input name="gpid" placeholder="GPID to Freeze">
 
-</script>
+<button>Freeze Product</button>
+
+</form>
+
+</div>
+
+
+<div class="section">
+
+<form method="POST" action="/flag">
+
+<input name="gpid" placeholder="GPID to Flag">
+
+<button>Flag Product</button>
+
+</form>
+
+</div>
+
+</div>
 </body>
 </html>
 `)
 })
 
-/* =======================================================
-   CREATE PRODUCT
-======================================================= */
+
+/* ========================
+   ROUTES
+======================== */
 
 app.post("/create", async(req,res)=>{
-try{
+ try{
 
-const {gpid,brand,model,category,factory,batch} = req.body
+  const { gpid,brand,model,category,factory,batch } = req.body
 
-const tx = await coreContract.createProduct(
-gpid,brand,model,category,factory,batch
-)
+  const tx = await core.createProduct(
+   gpid,brand,model,category,factory,batch
+  )
 
-await tx.wait()
+  await tx.wait()
 
-res.send("✔ Product Created")
+  res.send("✔ Product Created<br>TX: "+tx.hash)
 
-}catch(err){
-res.send("❌ "+err.reason || err.message)
-}
+ }catch(err){
+  res.send("❌ "+(err.reason || err.message))
+ }
 })
 
-/* =======================================================
-   TRANSFER OWNERSHIP
-======================================================= */
 
 app.post("/transfer", async(req,res)=>{
-try{
+ try{
 
-const {gpid,newOwner} = req.body
+  const tx = await core.transferOwnership(
+   req.body.gpid,
+   req.body.to
+  )
 
-const product = await coreContract.getProduct(gpid)
-const oldOwner = product[8]
+  await tx.wait()
 
-const tx = await coreContract.transferOwnership(gpid,newOwner)
-await tx.wait()
+  res.send("✔ Ownership Transferred<br>"+tx.hash)
 
-if(historyContract){
-await historyContract.record(gpid, oldOwner, newOwner)
-}
-
-res.send("✔ Ownership Transferred")
-
-}catch(err){
-res.send("❌ "+(err.reason||err.message))
-}
+ }catch(err){
+  res.send("❌ "+(err.reason || err.message))
+ }
 })
 
-/* =======================================================
-   HISTORY VIEW
-======================================================= */
 
-app.get("/history/:gpid", async(req,res)=>{
-try{
+app.post("/freeze", async(req,res)=>{
+ try{
 
-if(!historyContract) return res.send("History not deployed")
+  const tx = await shield.freeze(req.body.gpid)
+  await tx.wait()
 
-const data = await historyContract.getHistory(req.params.gpid)
+  res.send("🧊 PRODUCT FROZEN")
 
-res.json(data)
-
-}catch(err){
-res.send(err.message)
-}
+ }catch(err){
+  res.send("❌ "+(err.reason || err.message))
+ }
 })
 
-/* =======================================================
-   START SERVER
-======================================================= */
+
+app.post("/flag", async(req,res)=>{
+ try{
+
+  const tx = await shield.flag(req.body.gpid,"MANUAL_FLAG")
+  await tx.wait()
+
+  res.send("🚨 PRODUCT FLAGGED")
+
+ }catch(err){
+  res.send("❌ "+(err.reason || err.message))
+ }
+})
+
+
+/* ========================
+   SERVER
+======================== */
 
 app.listen(10000,()=>{
-console.log("===================================")
-console.log("🚀 TAAS PANEL LIVE")
-console.log("Wallet:",wallet.address)
-console.log("Core:",CORE)
-console.log("History:",HISTORY||"Not connected")
-console.log("===================================")
+ console.log("🚀 ASJUJ PANEL LIVE")
 })

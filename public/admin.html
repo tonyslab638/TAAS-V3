@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TaaS Admin Panel</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:white;text-align:center;padding:40px}
+input,button{padding:10px;margin:5px;border-radius:6px;border:none}
+button{background:#22c55e;color:white;font-weight:bold;cursor:pointer}
+.card{background:#1e293b;padding:20px;border-radius:12px;width:400px;margin:auto}
+</style>
+</head>
+<body>
+
+<h1>🛠 TaaS Admin Panel</h1>
+
+<div class="card">
+
+<h3>Create Product</h3>
+
+<input id="brand" placeholder="Brand"><br>
+<input id="model" placeholder="Model"><br>
+<input id="category" placeholder="Category"><br>
+<input id="factory" placeholder="Factory"><br>
+<input id="batch" placeholder="Batch"><br>
+<input id="owner" placeholder="Owner Address"><br>
+
+<button onclick="create()">Create</button>
+
+<p id="result"></p>
+
+</div>
+
+<script>
+async function create(){
+const data={
+brand:brand.value,
+model:model.value,
+category:category.value,
+factory:factory.value,
+batch:batch.value,
+owner:owner.value
+}
+
+const res=await fetch("/create",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(data)
+})
+
+const j=await res.json()
+result.innerText=JSON.stringify(j,null,2)
+}
+</script>
+
+</body>
+</html>
